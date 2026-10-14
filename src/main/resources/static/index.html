@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spring Boot MySQL Form</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 850px;
+            margin: 35px auto;
+            padding: 20px;
+            background: #f3f4f6;
+        }
+
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        input {
+            box-sizing: border-box;
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0 15px;
+        }
+
+        button {
+            padding: 10px 16px;
+            margin: 5px 5px 5px 0;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+            overflow-wrap: anywhere;
+        }
+
+        th {
+            background: #e5e7eb;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Person Registration</h1>
+    <p>Save and retrieve records using Spring Boot and MySQL.</p>
+
+    <form id="personForm">
+
+        <label for="name">Name</label>
+        <input id="name" name="name"
+               maxlength="100" required>
+
+        <label for="email">Email</label>
+        <input id="email" name="email"
+               type="email" maxlength="150" required>
+
+        <label for="city">City</label>
+        <input id="city" name="city"
+               maxlength="100" required>
+
+        <button type="submit">Save Record (POST)</button>
+
+        <button type="button" id="refreshButton">
+            View Records (GET)
+        </button>
+
+    </form>
+
+    <p id="message" role="status"></p>
+
+    <h2>Saved Records</h2>
+
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>City</th>
+        </tr>
+        </thead>
+
+        <tbody id="peopleTable"></tbody>
+    </table>
+
+    <h3>API Response</h3>
+    <pre id="response"></pre>
+
+</div>
+
+<script>
+    const apiUrl = "/api/people";
+
+    const form = document.getElementById("personForm");
+    const message = document.getElementById("message");
+    const responseBox = document.getElementById("response");
+    const table = document.getElementById("peopleTable");
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const person = {
+            name: document.getElementById("name").value.trim(),
+            email: document.getElementById("email").value.trim(),
+            city: document.getElementById("city").value.trim()
+        };
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(person)
+            });
+
+            const data = await response.json();
+
+            responseBox.textContent =
+                JSON.stringify(data, null, 2);
+
+            if (!response.ok) {
+                message.textContent =
+                    data.error || "Unable to save record.";
+                return;
+            }
+
+            message.textContent =
+                "Saved successfully. Database ID: " + data.id;
+
+            form.reset();
+            await loadPeople();
+
+        } catch (error) {
+            message.textContent =
+                "Request failed. Check Spring Boot and MySQL.";
+            responseBox.textContent = error.message;
+        }
+    });
+
+    document.getElementById("refreshButton")
+        .addEventListener("click", loadPeople);
+
+    async function loadPeople() {
+        try {
+            const response = await fetch(apiUrl);
+            const people = await response.json();
+
+            if (!response.ok) {
+                throw new Error("Unable to retrieve records");
+            }
+
+            table.replaceChildren();
+
+            people.forEach(person => {
+                const row = document.createElement("tr");
+
+                [person.id, person.name, person.email, person.city]
+                    .forEach(value => {
+                        const cell = document.createElement("td");
+                        cell.textContent = value ?? "";
+                        row.appendChild(cell);
+                    });
+
+                table.appendChild(row);
+            });
+
+            message.textContent =
+                "Retrieved " + people.length + " record(s).";
+
+            responseBox.textContent =
+                JSON.stringify(people, null, 2);
+
+        } catch (error) {
+            message.textContent =
+                "Unable to retrieve records.";
+            responseBox.textContent = error.message;
+        }
+    }
+
+    loadPeople();
+</script>
+
+</body>
+</html>
